@@ -283,6 +283,10 @@ p {
   overflow: hidden;
 }
 
+.wai-modal-allow-overflow {
+  overflow: visible;
+}
+
 .wai-modal-head {
   padding: 18px 20px;
   display: flex;

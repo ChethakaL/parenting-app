@@ -127,6 +127,22 @@ function RecipesWorkspaceContent({
     }
   }
 
+  async function deleteRecipe(recipeId: string) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await apiRequest({ path: `/recipes/${recipeId}`, method: "DELETE", token });
+      setNotice("Recipe deleted.");
+      setSelectedRecipeId(null);
+      await loadRecipes();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed to delete recipe.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="wai-view">
       <div className="wai-page-intro">
@@ -289,6 +305,16 @@ function RecipesWorkspaceContent({
                   </div>
                 )) : <div className="wai-empty">No cooking steps saved yet.</div>}
               </div>
+            </div>
+            <div className="wai-modal-actions" style={{ padding: "8px 0 0" }}>
+              <button
+                className="wai-danger-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void deleteRecipe(selectedRecipe.id)}
+              >
+                Delete recipe
+              </button>
             </div>
           </div>
         </RecipeImportModal>

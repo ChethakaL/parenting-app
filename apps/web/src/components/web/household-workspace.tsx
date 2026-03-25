@@ -292,7 +292,7 @@ function HouseholdWorkspaceContent({
 
       {addMemberModalOpen ? (
         <div className="wai-modal-overlay" role="dialog" aria-modal="true" aria-label="Add family member" onMouseDown={(e) => { if (e.target === e.currentTarget) setAddMemberModalOpen(false); }}>
-          <div className="wai-modal">
+          <div className="wai-modal wai-modal-allow-overflow">
             <div className="wai-modal-head">
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <span className="wai-icon-pill" aria-hidden="true"><FamilyIcon /></span>
@@ -466,7 +466,7 @@ function MemberEditorModal({
 
   return (
     <div className="wai-modal-overlay" role="dialog" aria-modal="true" aria-label="Edit family member" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="wai-modal">
+      <div className="wai-modal wai-modal-allow-overflow">
         <div className="wai-modal-head">
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <span className="wai-icon-pill" aria-hidden="true"><FamilyIcon /></span>

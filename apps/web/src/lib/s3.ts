@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const region = process.env.AWS_S3_REGION;
@@ -48,6 +48,16 @@ export async function getSignedGetUrl(args: { key: string; expiresInSeconds?: nu
   );
 }
 
+export async function deleteFromS3(args: { key: string }): Promise<void> {
+  const { key } = args;
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }),
+  );
+}
+
 export function s3KeyFromRecipeImage(householdId: string, recipeId: string): string {
   return `recipe-images/${householdId}/${recipeId}.jpg`;
 }
@@ -55,4 +65,3 @@ export function s3KeyFromRecipeImage(householdId: string, recipeId: string): str
 export function s3KeyFromReceiptImage(householdId: string, receiptId: string): string {
   return `receipts/${householdId}/${receiptId}.jpg`;
 }
-
