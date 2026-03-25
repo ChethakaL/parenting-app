@@ -1,0 +1,23 @@
+{
+  "name": "parenting-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "turbo": "^2.8.20"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.2",
+    "next-auth": "^4.24.13",
+    "pg": "^8.20.0",
+    "zod": "^4.3.6"
+  }
+}

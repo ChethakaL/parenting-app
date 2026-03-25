@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# Dependencies (installed fresh in the image)
+**/node_modules
+
+# Next.js build cache (built in image)
+**/.next
+
+# Logs
+**/*.log
+
+# Env file variants — do NOT list `.env` here; the Dockerfile copies `apps/web/.env`.
+**/.env.local
+**/.env.development
+**/.env.production
+**/.env.test
+**/.env.*.local
+
+# Docs / IDE (optional shrink context)
+**/.vscode
+**/.idea
+*.md
+
+# Mobile / unrelated app contexts for web-only image (optional)
+# apps/mobile/android
+# apps/mobile/ios
