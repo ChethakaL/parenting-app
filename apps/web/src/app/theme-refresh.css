@@ -901,6 +901,64 @@ textarea:focus,
   }
 }
 
+.wai-data-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(98, 119, 158, 0.1);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.wai-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.wai-data-table th,
+.wai-data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(98, 119, 158, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.wai-data-table th {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wai-text-soft);
+  background: rgba(247, 250, 255, 0.92);
+}
+
+.wai-data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.wai-data-table tr.is-clickable {
+  cursor: pointer;
+}
+
+.wai-data-table tr.is-clickable:hover {
+  background: rgba(247, 250, 255, 0.72);
+}
+
+.wai-data-table tr.is-active {
+  background: linear-gradient(135deg, rgba(255, 240, 247, 0.76), rgba(231, 247, 255, 0.76));
+}
+
+.wai-table-primary {
+  font-weight: 700;
+  color: var(--wai-text);
+}
+
+.wai-table-secondary {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  color: var(--wai-text-soft);
+  line-height: 1.45;
+}
+
 .wai-composer-dashboard {
   padding: 10px;
   border-radius: 22px;

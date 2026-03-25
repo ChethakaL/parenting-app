@@ -1,11 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest, formatPrettyDate } from "./api";
 import { FilePicker } from "./file-picker";
-import { RecipeIcon, UploadIcon } from "./icons";
+import { RecipeIcon } from "./icons";
 import { RecipeSummary } from "./types";
 import { WorkspaceShell } from "./workspace-shell";
+
+type RecipeModalMode = "url" | "text" | "photo" | null;
 
 export function RecipesWorkspace() {
   return (
@@ -28,6 +30,8 @@ function RecipesWorkspaceContent({
 }) {
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [query, setQuery] = useState("");
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<RecipeModalMode>(null);
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -51,6 +55,18 @@ function RecipesWorkspaceContent({
     void loadRecipes();
   }, [loadRecipes]);
 
+  const selectedRecipe = useMemo(
+    () => recipes.find((recipe) => recipe.id === selectedRecipeId) ?? null,
+    [recipes, selectedRecipeId],
+  );
+
+  function resetImportState() {
+    setUrl("");
+    setDescription("");
+    setPhotoFile(null);
+    setPhotoNotes("");
+  }
+
   async function importFromUrl(event: FormEvent) {
     event.preventDefault();
     if (!url.trim()) return;
@@ -59,8 +75,9 @@ function RecipesWorkspaceContent({
     setNotice(null);
     try {
       await apiRequest({ path: "/recipes/url", method: "POST", token, body: { url: url.trim() } });
-      setUrl("");
       setNotice("Recipe imported from URL.");
+      setModalMode(null);
+      resetImportState();
       await loadRecipes();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Failed to import recipe from URL.");
@@ -77,8 +94,9 @@ function RecipesWorkspaceContent({
     setNotice(null);
     try {
       await apiRequest({ path: "/recipes/text", method: "POST", token, body: { description: description.trim() } });
-      setDescription("");
       setNotice("Recipe extracted from text.");
+      setModalMode(null);
+      resetImportState();
       await loadRecipes();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Failed to import recipe from text.");
@@ -98,9 +116,9 @@ function RecipesWorkspaceContent({
       form.append("image", photoFile);
       if (photoNotes.trim()) form.append("notes", photoNotes.trim());
       await apiRequest({ path: "/recipes/photo", method: "POST", token, body: form, isFormData: true });
-      setPhotoFile(null);
-      setPhotoNotes("");
       setNotice("Recipe extracted from photo.");
+      setModalMode(null);
+      resetImportState();
       await loadRecipes();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Failed to import recipe from photo.");
@@ -113,54 +131,111 @@ function RecipesWorkspaceContent({
     <div className="wai-view">
       <div className="wai-page-intro">
         <p className="wai-section-kicker">Recipes</p>
-        <h2>Capture recipes from URLs, raw text, or photos.</h2>
-        <p>This turns the recipe endpoints into a real user workflow instead of leaving them as backend-only utilities.</p>
+        <h2>Saved recipes in a readable list with modal-based import and detail views.</h2>
+        <p>Use the buttons on the right to add recipes from a URL, free text, or a photo. Open any row to review ingredients and steps.</p>
       </div>
 
-      <div className="wai-three-column">
-        <section className="wai-panel">
-          <div className="wai-panel-head">
-            <div>
-              <h3>Import from URL</h3>
-              <p>Extract and save a web recipe</p>
-            </div>
-            <span className="wai-panel-icon"><RecipeIcon /></span>
+      <section className="wai-panel">
+        <div className="wai-panel-head">
+          <div>
+            <h3>Recipe library</h3>
+            <p>{recipes.length} recipes available</p>
           </div>
-          <form className="wai-form" onSubmit={importFromUrl}>
+          <div className="wai-inline-actions" style={{ flexWrap: "nowrap", justifyContent: "flex-end", alignItems: "center" }}>
+            <input
+              className="wai-inline-input"
+              style={{ minWidth: "220px", width: "240px", flex: "0 1 240px" }}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search recipes"
+            />
+            <div className="wai-inline-actions" style={{ flexWrap: "nowrap", gap: "12px" }}>
+              <button className="wai-secondary-button" type="button" onClick={() => setModalMode("url")}>Add from URL</button>
+              <button className="wai-secondary-button" type="button" onClick={() => setModalMode("text")}>Add from text</button>
+              <button className="wai-primary-button" type="button" onClick={() => setModalMode("photo")}>Add from photo</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="wai-data-table-wrap">
+          <table className="wai-data-table">
+            <thead>
+              <tr>
+                <th>Recipe</th>
+                <th>Prep</th>
+                <th>Serves</th>
+                <th>Tags</th>
+                <th>Saved</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recipes.length === 0 ? (
+                <tr>
+                  <td colSpan={5}><div className="wai-empty">No recipes saved yet.</div></td>
+                </tr>
+              ) : null}
+              {recipes.map((recipe) => (
+                <tr key={recipe.id} className="is-clickable" onClick={() => setSelectedRecipeId(recipe.id)}>
+                  <td>
+                    <div className="wai-table-primary">{recipe.name}</div>
+                    <div className="wai-table-secondary">{recipe.description ?? "No description saved."}</div>
+                  </td>
+                  <td>{recipe.prepTimeMins ? `${recipe.prepTimeMins} min` : "n/a"}</td>
+                  <td>{recipe.servings ?? "n/a"}</td>
+                  <td>{recipe.tags.length ? recipe.tags.join(", ") : "—"}</td>
+                  <td>{formatPrettyDate(recipe.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {modalMode === "url" ? (
+        <RecipeImportModal
+          title="Add Recipe From URL"
+          subtitle="Paste a recipe link and we will extract the details."
+          onClose={() => setModalMode(null)}
+        >
+          <form className="wai-modal-body" onSubmit={importFromUrl}>
             <label>
               Recipe URL
-              <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://..." />
+              <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://..." autoFocus />
             </label>
-            <button className="wai-primary-button" type="submit" disabled={busy}>Import URL</button>
-          </form>
-        </section>
-
-        <section className="wai-panel">
-          <div className="wai-panel-head">
-            <div>
-              <h3>Import from text</h3>
-              <p>Paste a recipe or rough notes</p>
+            <div className="wai-modal-actions">
+              <button className="wai-secondary-button" type="button" onClick={() => setModalMode(null)}>Cancel</button>
+              <button className="wai-primary-button" type="submit" disabled={busy || !url.trim()}>Import URL</button>
             </div>
-            <span className="wai-panel-icon"><RecipeIcon /></span>
-          </div>
-          <form className="wai-form" onSubmit={importFromText}>
+          </form>
+        </RecipeImportModal>
+      ) : null}
+
+      {modalMode === "text" ? (
+        <RecipeImportModal
+          title="Add Recipe From Text"
+          subtitle="Paste notes, ingredients, or a full recipe and we will structure it."
+          onClose={() => setModalMode(null)}
+        >
+          <form className="wai-modal-body" onSubmit={importFromText}>
             <label>
               Recipe text
-              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Paste the recipe details here..." rows={6} />
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Paste the recipe details here..." rows={7} autoFocus />
             </label>
-            <button className="wai-primary-button" type="submit" disabled={busy}>Import text</button>
-          </form>
-        </section>
-
-        <section className="wai-panel">
-          <div className="wai-panel-head">
-            <div>
-              <h3>Import from photo</h3>
-              <p>Upload a card, screenshot, or cookbook page</p>
+            <div className="wai-modal-actions">
+              <button className="wai-secondary-button" type="button" onClick={() => setModalMode(null)}>Cancel</button>
+              <button className="wai-primary-button" type="submit" disabled={busy || !description.trim()}>Import text</button>
             </div>
-            <span className="wai-panel-icon"><UploadIcon /></span>
-          </div>
-          <form className="wai-form" onSubmit={importFromPhoto}>
+          </form>
+        </RecipeImportModal>
+      ) : null}
+
+      {modalMode === "photo" ? (
+        <RecipeImportModal
+          title="Add Recipe From Photo"
+          subtitle="Upload a screenshot, cookbook page, or recipe card."
+          onClose={() => setModalMode(null)}
+        >
+          <form className="wai-modal-body" onSubmit={importFromPhoto}>
             <FilePicker
               label="Choose recipe image"
               accept="image/*"
@@ -172,51 +247,92 @@ function RecipesWorkspaceContent({
               Notes
               <textarea value={photoNotes} onChange={(event) => setPhotoNotes(event.target.value)} placeholder="Optional notes for the extractor..." rows={4} />
             </label>
-            <button className="wai-primary-button" type="submit" disabled={busy}>Import photo</button>
+            <div className="wai-modal-actions">
+              <button className="wai-secondary-button" type="button" onClick={() => setModalMode(null)}>Cancel</button>
+              <button className="wai-primary-button" type="submit" disabled={busy || !photoFile}>Import photo</button>
+            </div>
           </form>
-        </section>
-      </div>
+        </RecipeImportModal>
+      ) : null}
 
-      <section className="wai-panel">
-        <div className="wai-panel-head">
-          <div>
-            <h3>Saved recipes</h3>
-            <p>{recipes.length} recipes available</p>
-          </div>
-          <input className="wai-inline-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search recipes" />
-        </div>
-        <div className="wai-recipe-grid">
-          {recipes.length === 0 ? <div className="wai-empty">No recipes saved yet.</div> : null}
-          {recipes.map((recipe) => (
-            <article key={recipe.id} className="wai-recipe-card">
-              {recipe.imageUrl ? (
-                <div className="wai-recipe-figure">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={recipe.imageUrl} alt={recipe.name} />
-                </div>
-              ) : null}
+      {selectedRecipe ? (
+        <RecipeImportModal
+          title={selectedRecipe.name}
+          subtitle={selectedRecipe.description ?? "Saved recipe details"}
+          onClose={() => setSelectedRecipeId(null)}
+        >
+          <div className="wai-modal-body">
+            <div className="wai-form-grid">
+              <div className="wai-empty">Prep: {selectedRecipe.prepTimeMins ? `${selectedRecipe.prepTimeMins} min` : "n/a"}</div>
+              <div className="wai-empty">Serves: {selectedRecipe.servings ?? "n/a"}</div>
+            </div>
+            <div className="wai-meal-detail-grid">
               <div className="wai-stack">
-                <div>
-                  <strong>{recipe.name}</strong>
-                  <p>{recipe.description ?? "No description saved."}</p>
+                <div className="wai-column-head">
+                  <h3>Ingredients</h3>
+                  <span>{selectedRecipe.ingredients?.length ?? 0}</span>
                 </div>
-                <div className="wai-inline-actions">
-                  <span className="wai-tag">{recipe.prepTimeMins ? `${recipe.prepTimeMins} min prep` : "Prep n/a"}</span>
-                  <span className="wai-tag">{recipe.servings ? `${recipe.servings} servings` : "Servings n/a"}</span>
-                  <span className="wai-tag">{formatPrettyDate(recipe.createdAt)}</span>
-                </div>
-                {recipe.tags.length > 0 ? (
-                  <div className="wai-tag-row">
-                    {recipe.tags.map((tag) => (
-                      <span key={tag} className="wai-tag">{tag}</span>
-                    ))}
+                {selectedRecipe.ingredients?.length ? selectedRecipe.ingredients.map((ingredient, index) => (
+                  <div key={`${selectedRecipe.id}-ingredient-${index}`} className="wai-empty">
+                    {ingredient.quantity ? `${ingredient.quantity}${ingredient.unit ? ` ${ingredient.unit}` : ""} ` : ""}{ingredient.name}
                   </div>
-                ) : null}
+                )) : <div className="wai-empty">No ingredients saved yet.</div>}
               </div>
-            </article>
-          ))}
+              <div className="wai-stack">
+                <div className="wai-column-head">
+                  <h3>Instructions</h3>
+                  <span>{selectedRecipe.instructions?.length ?? 0}</span>
+                </div>
+                {selectedRecipe.instructions?.length ? selectedRecipe.instructions.map((instruction, index) => (
+                  <div key={`${selectedRecipe.id}-instruction-${index}`} className="wai-empty">
+                    Step {instruction.step ?? index + 1}: {instruction.text}
+                  </div>
+                )) : <div className="wai-empty">No cooking steps saved yet.</div>}
+              </div>
+            </div>
+          </div>
+        </RecipeImportModal>
+      ) : null}
+    </div>
+  );
+}
+
+function RecipeImportModal({
+  title,
+  subtitle,
+  onClose,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="wai-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="wai-modal wai-modal-wide">
+        <div className="wai-modal-head">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <span className="wai-icon-pill" aria-hidden="true">
+              <RecipeIcon />
+            </span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, letterSpacing: "-0.02em" }}>{title}</h3>
+              <p style={{ margin: 0, color: "var(--wai-text-soft)", fontWeight: 650 }}>{subtitle}</p>
+            </div>
+          </div>
+          <button className="wai-modal-close" type="button" onClick={onClose} aria-label="Close">✕</button>
         </div>
-      </section>
+        {children}
+      </div>
     </div>
   );
 }
